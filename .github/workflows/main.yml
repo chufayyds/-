@@ -12,11 +12,12 @@ on:
           - 谷歌GKI
           - 手机厂商
       vendor:
-        description: '厂商（选"手机厂商"时使用）'
+        description: '厂商（只在【手机厂商】模式用；选【谷歌GKI】时完全忽略它，不用管它）'
         required: false
-        default: '小米红米'
+        default: '不选（谷歌GKI忽略）'
         type: choice
         options:
+          - 不选（谷歌GKI忽略）
           - 小米红米
           - 一加
           - 真我
@@ -70,9 +71,37 @@ on:
           - '6.6'
           - '6.12'
       kernel_full_version:
-        description: '内核完整版本号（选填）：从手机【uname -r】完整复制，如 4.19.191-g0d44d583e552（小数点后几位、-g后面一串全要）。填了会自动把源码版本对齐到和手机一模一样，模块才能直接加载；留空=不改'
+        description: '完整版本号（自定义，选填）：下拉里没有的版本，把手机 uname -r 直接粘这里（如 4.19.191-g0d44d583e552）；和下面下拉都空=不改源码版本'
         required: false
         default: ''
+      kernel_full_version_pick:
+        description: '常用完整版本号（选填，括号里是常见安卓版本供对照）：从下拉里找你的版本；没有就填上面的自定义框；不填=不改'
+        required: false
+        default: '不填（不改版本）'
+        type: choice
+        options:
+          - '不填（不改版本）'
+          - '4.9.106 (安卓8.1)'
+          - '4.9.179 (安卓9)'
+          - '4.9.186 (安卓9/10)'
+          - '4.14.83 (安卓9)'
+          - '4.14.117 (安卓9/10)'
+          - '4.14.141 (安卓10)'
+          - '4.14.180 (安卓10/11)'
+          - '4.14.186 (安卓11)'
+          - '4.14.190 (安卓11)'
+          - '4.19.81 (安卓10)'
+          - '4.19.95 (安卓10/11)'
+          - '4.19.110 (安卓10/11)'
+          - '4.19.113 (安卓11)'
+          - '4.19.125 (安卓11)'
+          - '4.19.157 (安卓11/12)'
+          - '4.19.191 (安卓12)'
+          - '5.4.61 (安卓11)'
+          - '5.4.86 (安卓11/12)'
+          - '5.4.147 (安卓12)'
+          - '5.4.191 (安卓12/13)'
+          - '5.4.233 (安卓13)'
       android_version:
         description: '安卓版本：4.4→7/8/9；4.9→8/9/10；4.14→10/11/12；4.19→11/12/13；5.4→11；5.10→12或13；5.15→13或14；6.1→14；6.6→15；6.12→15。留空=自动（注：4.x没有谷歌GKI分支，请选【手机厂商】模式）'
         required: false
@@ -108,6 +137,13 @@ jobs:
           V="${{ github.event.inputs.vendor }}"
           D="${{ github.event.inputs.device_code }}"
           R="${{ github.event.inputs.kernel_repo }}"
+          if [ -z "$R" ]; then
+            case "$V" in
+              ''|'不选（谷歌GKI忽略）')
+                echo "::error::你选了【手机厂商】模式，但【厂商】还没选——请补选厂商（或在【内核仓库地址】填完整URL）后重跑。"
+                exit 1 ;;
+            esac
+          fi
           echo ">>> 厂商: $V | 机型代号: $D"
           case "$V" in
             小米红米)
@@ -195,7 +231,7 @@ jobs:
           echo "method=$METHOD"     >> $GITHUB_OUTPUT
           echo "out_path=$OUT_PATH" >> $GITHUB_OUTPUT
           echo ">>> [谷歌GKI] 安卓: $AV | 内核: $KV | 分支: $BRANCH | 方式: $METHOD"
-          if [ -n "${{ github.event.inputs.kernel_full_version }}" ]; then
+          if [ -n "${{ github.event.inputs.kernel_full_version }}" ] || [ "${{ github.event.inputs.kernel_full_version_pick }}" != "不填（不改版本）" ]; then
             echo ">>> 提示: 谷歌GKI模式不需要完整版本号（KMI统一），该参数已忽略；只有手机厂商模式才需要精确对齐。"
           fi
 
@@ -315,10 +351,18 @@ jobs:
           du -sh kernel || true
 
       - name: 对齐内核版本号（填了完整版本号才执行）
-        if: ${{ github.event.inputs.source_mode == '手机厂商' && github.event.inputs.kernel_full_version != '' }}
+        if: ${{ github.event.inputs.source_mode == '手机厂商' && (github.event.inputs.kernel_full_version != '' || github.event.inputs.kernel_full_version_pick != '不填（不改版本）') }}
         run: |
           cd kernel
           FULL="${{ github.event.inputs.kernel_full_version }}"
+          if [ -z "$FULL" ] && [ "${{ github.event.inputs.kernel_full_version_pick }}" != "不填（不改版本）" ]; then
+            FULL="${{ github.event.inputs.kernel_full_version_pick }}"
+          fi
+          FULL="$(echo "$FULL" | sed 's/ (.*//' | sed 's/（.*//')"
+          if [ -z "$FULL" ]; then
+            echo "::error::完整版本号为空，请重新填写后重跑"
+            exit 1
+          fi
           echo ">>> 目标完整版本: $FULL"
           V=$(echo "$FULL" | cut -d. -f1)
           P=$(echo "$FULL" | cut -d. -f2)
