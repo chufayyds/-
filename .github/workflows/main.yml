@@ -3,6 +3,51 @@ name: 安卓内核驱动云编译（多厂商）
 on:
   workflow_dispatch:
     inputs:
+      build_plan:
+        description: '版本方案（选一个）：内核版本 + 对应安卓版本。一个内核对应多个安卓的会分成多条（如 5.15.10 有安卓12、安卓13 两条）'
+        required: true
+        default: '5.10 (安卓12)'
+        type: choice
+        options:
+          - '4.9.106 (安卓8.1)'
+          - '4.9.179 (安卓9)'
+          - '4.9.186 (安卓9)'
+          - '4.9.186 (安卓10)'
+          - '4.14.83 (安卓9)'
+          - '4.14.117 (安卓9)'
+          - '4.14.117 (安卓10)'
+          - '4.14.141 (安卓10)'
+          - '4.14.180 (安卓10)'
+          - '4.14.180 (安卓11)'
+          - '4.14.186 (安卓11)'
+          - '4.14.190 (安卓11)'
+          - '4.19.81 (安卓10)'
+          - '4.19.95 (安卓10)'
+          - '4.19.95 (安卓11)'
+          - '4.19.110 (安卓10)'
+          - '4.19.110 (安卓11)'
+          - '4.19.113 (安卓11)'
+          - '4.19.125 (安卓11)'
+          - '4.19.157 (安卓11)'
+          - '4.19.157 (安卓12)'
+          - '4.19.191 (安卓12)'
+          - '5.4.61 (安卓11)'
+          - '5.4.86 (安卓11)'
+          - '5.4.86 (安卓12)'
+          - '5.4.147 (安卓12)'
+          - '5.4.191 (安卓12)'
+          - '5.4.191 (安卓13)'
+          - '5.4.233 (安卓13)'
+          - '5.10 (安卓12)'
+          - '5.10 (安卓13)'
+          - '5.15 (安卓13)'
+          - '5.15 (安卓14)'
+          - '5.15.10 (安卓12)'
+          - '5.15.10 (安卓13)'
+          - '6.1 (安卓14)'
+          - '6.6 (安卓15)'
+          - '6.6.89 (安卓15)'
+          - '6.12 (安卓15)'
       source_mode:
         description: '内核源码来源'
         required: true
@@ -39,81 +84,17 @@ on:
         required: false
         default: ''
       kernel_branch:
-        description: '源码分支或标签（如 cepheus-p-oss）'
+        description: '源码分支（选填）：谷歌GKI不用填；手机厂商模式不知道就留空=拉默认分支，失败再填（如 cepheus-p-oss）'
         required: false
         default: ''
       kernel_defconfig:
         description: '配置文件defconfig（不知道就先留空跑一次，日志会列出全部）'
         required: false
         default: ''
-      compiler:
-        description: '编译器：老内核(4.x)选GCC，新内核选clang'
-        required: false
-        default: 'GCC'
-        type: choice
-        options:
-          - GCC
-          - clang
-      kernel_version:
-        description: '内核版本（选"谷歌GKI"时使用）'
-        required: false
-        default: '6.6'
-        type: choice
-        options:
-          - '4.4'
-          - '4.9'
-          - '4.14'
-          - '4.19'
-          - '5.4'
-          - '5.10'
-          - '5.15'
-          - '6.1'
-          - '6.6'
-          - '6.12'
-      kernel_full_version:
-        description: '完整版本号（自定义，选填）：下拉里没有的版本，把手机 uname -r 直接粘这里（如 4.19.191-g0d44d583e552）；和下面下拉都空=不改源码版本'
-        required: false
-        default: ''
-      kernel_full_version_pick:
-        description: '常用完整版本号（选填，括号里是常见安卓版本供对照）：从下拉里找你的版本；没有就填上面的自定义框；不填=不改'
-        required: false
-        default: '不填（不改版本）'
-        type: choice
-        options:
-          - '不填（不改版本）'
-          - '4.9.106 (安卓8.1)'
-          - '4.9.179 (安卓9)'
-          - '4.9.186 (安卓9/10)'
-          - '4.14.83 (安卓9)'
-          - '4.14.117 (安卓9/10)'
-          - '4.14.141 (安卓10)'
-          - '4.14.180 (安卓10/11)'
-          - '4.14.186 (安卓11)'
-          - '4.14.190 (安卓11)'
-          - '4.19.81 (安卓10)'
-          - '4.19.95 (安卓10/11)'
-          - '4.19.110 (安卓10/11)'
-          - '4.19.113 (安卓11)'
-          - '4.19.125 (安卓11)'
-          - '4.19.157 (安卓11/12)'
-          - '4.19.191 (安卓12)'
-          - '5.4.61 (安卓11)'
-          - '5.4.86 (安卓11/12)'
-          - '5.4.147 (安卓12)'
-          - '5.4.191 (安卓12/13)'
-          - '5.4.233 (安卓13)'
-      android_version:
-        description: '安卓版本：4.4→7/8/9；4.9→8/9/10；4.14→10/11/12；4.19→11/12/13；5.4→11；5.10→12或13；5.15→13或14；6.1→14；6.6→15；6.12→15。留空=自动（注：4.x没有谷歌GKI分支，请选【手机厂商】模式）'
-        required: false
-        default: ''
       driver_name:
         description: '产物模块名（与 Makefile 的 obj-m 对应）'
         required: true
         default: 'Arlo.ko'
-      target_arch:
-        description: '设备架构（默认aarch64）'
-        required: true
-        default: 'aarch64'
 
 jobs:
   build:
@@ -128,6 +109,29 @@ jobs:
         run: |
           mkdir kerneldriver
           mv ./code/*.h ./code/*.c ./code/Makefile kerneldriver/
+
+      # ================= 版本方案解析（两种模式都用） =================
+      - name: 解析版本方案
+        id: plan
+        run: |
+          PLAN="${{ github.event.inputs.build_plan }}"
+          echo ">>> 版本方案: $PLAN"
+          KV=$(echo "$PLAN" | grep -oE '^[0-9]+\.[0-9]+')
+          AV=$(echo "$PLAN" | grep -oE '安卓[0-9]+(\.[0-9]+)?' | head -1 | sed 's/安卓//')
+          FULL=$(echo "$PLAN" | sed 's/ (.*//')
+          if [ -z "$KV" ] || [ -z "$AV" ]; then
+            echo "::error::版本方案解析失败: $PLAN"
+            exit 1
+          fi
+          echo ">>> 解析: 内核=$KV | 安卓版本=$AV | 完整版本=$FULL"
+          echo "kv=$KV" >> $GITHUB_OUTPUT
+          echo "av=$AV" >> $GITHUB_OUTPUT
+          echo "full=$FULL" >> $GITHUB_OUTPUT
+          if echo "$KV" | grep -q '^4\.'; then
+            echo "compiler=GCC" >> $GITHUB_OUTPUT
+          else
+            echo "compiler=clang" >> $GITHUB_OUTPUT
+          fi
 
       # ================= 手机厂商：解析仓库 =================
       - name: 解析厂商内核仓库地址
@@ -179,8 +183,8 @@ jobs:
         if: ${{ github.event.inputs.source_mode == '谷歌GKI' }}
         id: vars
         run: |
-          KV="${{ github.event.inputs.kernel_version }}"
-          AV="${{ github.event.inputs.android_version }}"
+          KV="${{ steps.plan.outputs.kv }}"
+          AV="${{ steps.plan.outputs.av }}"
           case "$KV" in
             4.*)
               echo "::error::内核4.x没有谷歌GKI官方分支（ GKI从5.4才开始）。4.x机型（如小米4.14/4.19）请把【内核源码来源】改为【手机厂商】，用厂商开源源码编译。"
@@ -224,16 +228,13 @@ jobs:
           if [ "$AV" -le 13 ]; then
             METHOD="build";  OUT_PATH="out/android${AV}-${KV}/dist"
           else
-            METHOD="bazel";  OUT_PATH="out/kernel_${{ github.event.inputs.target_arch }}"
+            METHOD="bazel";  OUT_PATH="out/kernel_aarch64"
           fi
           echo "android=$AV"        >> $GITHUB_OUTPUT
           echo "branch=$BRANCH"     >> $GITHUB_OUTPUT
           echo "method=$METHOD"     >> $GITHUB_OUTPUT
           echo "out_path=$OUT_PATH" >> $GITHUB_OUTPUT
           echo ">>> [谷歌GKI] 安卓: $AV | 内核: $KV | 分支: $BRANCH | 方式: $METHOD"
-          if [ -n "${{ github.event.inputs.kernel_full_version }}" ] || [ "${{ github.event.inputs.kernel_full_version_pick }}" != "不填（不改版本）" ]; then
-            echo ">>> 提示: 谷歌GKI模式不需要完整版本号（KMI统一），该参数已忽略；只有手机厂商模式才需要精确对齐。"
-          fi
 
       - name: 安装 repo 工具（谷歌GKI）
         if: ${{ github.event.inputs.source_mode == '谷歌GKI' }}
@@ -293,7 +294,7 @@ jobs:
         if: ${{ github.event.inputs.source_mode == '谷歌GKI' && fromJSON(steps.vars.outputs.android) <= 13 }}
         run: |
           cd android-kernel
-          MOD_FILE="common/android/gki_${{ github.event.inputs.target_arch }}_modules"
+          MOD_FILE="common/android/gki_aarch64_modules"
           if [ -f "$MOD_FILE" ]; then
             echo "drivers/kerneldriver/${{ github.event.inputs.driver_name }}" >> "$MOD_FILE"
             echo ">>> $MOD_FILE 已更新"
@@ -318,8 +319,8 @@ jobs:
         run: |
           cd android-kernel
           for symbol in register_kprobe unregister_kprobe; do
-            grep -q "$symbol" common/android/abi_gki_${{ github.event.inputs.target_arch }} || \
-            echo "$symbol" >> common/android/abi_gki_${{ github.event.inputs.target_arch }}
+            grep -q "$symbol" common/android/abi_gki_aarch64 || \
+            echo "$symbol" >> common/android/abi_gki_aarch64
           done
           sed -i '/EXPORT_SYMBOL(unregister_kprobe);/a EXPORT_SYMBOL(register_kprobe);' common/kernel/kprobes.c
 
@@ -327,41 +328,38 @@ jobs:
         if: ${{ github.event.inputs.source_mode == '谷歌GKI' && steps.vars.outputs.method == 'build' }}
         run: |
           cd android-kernel
-          BUILD_CONFIG=common/build.config.gki.${{ github.event.inputs.target_arch }} LTO=thin build/build.sh -j32
+          BUILD_CONFIG=common/build.config.gki.aarch64 LTO=thin build/build.sh -j32
 
       - name: 编译驱动（谷歌GKI，Bazel）
         if: ${{ github.event.inputs.source_mode == '谷歌GKI' && steps.vars.outputs.method == 'bazel' }}
         run: |
           cd android-kernel
-          tools/bazel run //common:kernel_${{ github.event.inputs.target_arch }}_dist
+          tools/bazel run //common:kernel_aarch64_dist
 
       # ================= 手机厂商：拉源码 + 编译 =================
       - name: 拉取厂商内核源码
         if: ${{ github.event.inputs.source_mode == '手机厂商' }}
         run: |
           BR="${{ github.event.inputs.kernel_branch }}"
+          echo ">>> 拉取: ${{ steps.vendor.outputs.repo }} （分支: ${BR:-默认}）"
           if [ -z "$BR" ]; then
-            echo "::error::请填写【源码分支】（如 cepheus-p-oss）"
-            exit 1
+            git clone --depth=1 "${{ steps.vendor.outputs.repo }}" kernel \
+              || { echo "::error::拉取失败！请检查【内核仓库地址】是否正确"; exit 1; }
+          else
+            git clone --depth=1 -b "$BR" "${{ steps.vendor.outputs.repo }}" kernel \
+              || (rm -rf kernel && git clone -b "$BR" "${{ steps.vendor.outputs.repo }}" kernel) \
+              || { echo "::error::拉取失败！请确认仓库URL和分支名是否与你的机型匹配（可在【内核仓库地址】填完整URL重试）"; exit 1; }
           fi
-          echo ">>> 拉取: ${{ steps.vendor.outputs.repo }} (分支: $BR)"
-          git clone --depth=1 -b "$BR" "${{ steps.vendor.outputs.repo }}" kernel \
-            || (rm -rf kernel && git clone -b "$BR" "${{ steps.vendor.outputs.repo }}" kernel) \
-            || { echo "::error::拉取失败！请确认仓库URL和分支名是否与你的机型匹配（可在【内核仓库地址】填完整URL重试）"; exit 1; }
           du -sh kernel || true
 
-      - name: 对齐内核版本号（填了完整版本号才执行）
-        if: ${{ github.event.inputs.source_mode == '手机厂商' && (github.event.inputs.kernel_full_version != '' || github.event.inputs.kernel_full_version_pick != '不填（不改版本）') }}
+      - name: 对齐内核版本号（方案含小版本号时自动）
+        if: ${{ github.event.inputs.source_mode == '手机厂商' }}
         run: |
           cd kernel
-          FULL="${{ github.event.inputs.kernel_full_version }}"
-          if [ -z "$FULL" ] && [ "${{ github.event.inputs.kernel_full_version_pick }}" != "不填（不改版本）" ]; then
-            FULL="${{ github.event.inputs.kernel_full_version_pick }}"
-          fi
-          FULL="$(echo "$FULL" | sed 's/ (.*//' | sed 's/（.*//')"
-          if [ -z "$FULL" ]; then
-            echo "::error::完整版本号为空，请重新填写后重跑"
-            exit 1
+          FULL="${{ steps.plan.outputs.full }}"
+          if ! echo "$FULL" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+            echo ">>> 方案里没有小版本号（如 5.15 / 6.6），跳过版本对齐"
+            exit 0
           fi
           echo ">>> 目标完整版本: $FULL"
           V=$(echo "$FULL" | cut -d. -f1)
@@ -379,7 +377,7 @@ jobs:
           head -4 Makefile
 
       - name: 下载clang工具链（厂商，clang模式）
-        if: ${{ github.event.inputs.source_mode == '手机厂商' && github.event.inputs.compiler != 'GCC' }}
+        if: ${{ github.event.inputs.source_mode == '手机厂商' && steps.plan.outputs.compiler != 'GCC' }}
         run: |
           mkdir -p "$HOME/clang" && cd "$HOME/clang"
           curl -fsSL -o clang.tar.gz "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r383902b.tar.gz" \
@@ -388,7 +386,7 @@ jobs:
           "$HOME/clang/bin/clang" --version
 
       - name: 安装GCC工具链（厂商，GCC模式）
-        if: ${{ github.event.inputs.source_mode == '手机厂商' && github.event.inputs.compiler == 'GCC' }}
+        if: ${{ github.event.inputs.source_mode == '手机厂商' && steps.plan.outputs.compiler == 'GCC' }}
         run: |
           sudo apt-get install -y gcc-aarch64-linux-gnu
           aarch64-linux-gnu-gcc --version | head -1
@@ -422,7 +420,7 @@ jobs:
         if: ${{ github.event.inputs.source_mode == '手机厂商' }}
         run: |
           cd kernel
-          if [ "${{ github.event.inputs.compiler }}" = "GCC" ]; then
+          if [ "${{ steps.plan.outputs.compiler }}" = "GCC" ]; then
             export CROSS_COMPILE=aarch64-linux-gnu-
             MAKE_ARGS="ARCH=arm64 CROSS_COMPILE=$CROSS_COMPILE"
           else
@@ -453,7 +451,7 @@ jobs:
       - name: 上传产物
         uses: actions/upload-artifact@v4.6.2
         with:
-          name: 内核驱动-${{ github.event.inputs.target_arch }}
+          name: 内核驱动-aarch64
           path: |
             kerneldriver/**/*.ko
             android-kernel/out/**/*.ko
